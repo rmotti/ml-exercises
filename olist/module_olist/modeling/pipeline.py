@@ -17,7 +17,7 @@ CATEGORICAL_FEATURES = [
     "purchase_hour",
     "purchase_weekday", 
     "purchase_month",
-    "costumer_state",
+    "customer_state",
 ]
 
 def create_preprocessor () -> ColumnTransformer:
