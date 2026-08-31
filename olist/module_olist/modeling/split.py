@@ -10,7 +10,7 @@ FEATURES = [
     "seller_count",
     "total_price",
     "total_freight",
-    "costumer_state",
+    "customer_state",
 ]
 
 TARGET = "is_late"
