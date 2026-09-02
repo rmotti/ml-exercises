@@ -88,7 +88,8 @@ def create_lightgbm_pipeline() -> Pipeline:
         n_estimators=100,
         learning_rate=0.1,
         max_depth=3,
-        random_state=42
+        random_state=42,
+        verbose=-1,  # silencia os avisos de log do LightGBM
         )
     return Pipeline(
         steps=[

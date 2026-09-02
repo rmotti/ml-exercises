@@ -1,45 +1,71 @@
 import numpy as np
 from loguru import logger
-from sklearn.metrics import (precision_score, recall_score, f1_score, roc_auc_score,)
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score,
+)
 
-def evaluate_models(
-        X_test, y_test, models
-):
+
+def evaluate_model(model, X_test, y_test, threshold):
     """
-    Evaluate the trained models on the test set.
+    Avalia o modelo final no conjunto de teste.
+
+    O threshold NÃO é escolhido aqui: ele vem da validação cruzada,
+    calculado sobre as probabilidades Out-of-Fold do treino.
+    Assim o conjunto de teste permanece intocado e serve como
+    estimativa honesta do desempenho em produção.
 
     Args:
-        X_test (pd.DataFrame): Test features.
-        y_test (pd.Series): True labels for the test set.
-        models (dict): Dictionary of trained models.
+        model: Pipeline já treinado.
+        X_test: Features de teste.
+        y_test: Rótulos verdadeiros de teste.
+        threshold (float): Ponto de corte definido na Cross Validation.
 
     Returns:
-        dict: A dictionary containing evaluation metrics for each model.
+        dict: Métricas do modelo no conjunto de teste.
     """
-    for name, model in models.items():
-        y_proba = model.predict_proba(X_test)[:,1]
 
-        best_treshold = None
-        best_f1 = -1
-        best_precision = None
-        best_recall = None
+    # Probabilidade de o pedido atrasar.
+    y_proba = model.predict_proba(X_test)[:, 1]
 
-        for threshold in np.range(0.05, 0.50, 0.01):
-            y_pred = (y_proba >= 0.05).astype(int)
-            precision = precision_score(y_test, y_pred)
-            recall = recall_score(y_test, y_pred)
-            f1 = f1_score(y_test, y_pred)
+    # Aplica o ponto de corte definido na Cross Validation.
+    y_pred = (y_proba >= threshold).astype(int)
 
-            if f1 > best_f1:
-                best_f1 = f1
-                best_treshold = threshold
-                best_precision = precision
-                best_recall = recall
-        roc_auc = roc_auc_score(y_test, y_proba,)
+    metrics = {
+        "threshold": threshold,
+        "accuracy": accuracy_score(y_test, y_pred),
+        "precision": precision_score(y_test, y_pred, zero_division=0),
+        "recall": recall_score(y_test, y_pred, zero_division=0),
+        "f1": f1_score(y_test, y_pred, zero_division=0),
+        "roc_auc": roc_auc_score(y_test, y_proba),
+        "pr_auc": average_precision_score(y_test, y_proba),
+    }
 
-        logger.info(f"Model: {name}")
-        logger.info(f"Best Threshold: {best_treshold:.2f}")
-        logger.info(f"Precision: {best_precision:.4f}")
-        logger.info(f"Recall: {best_recall:.4f}")
-        logger.info(f"F1 Score: {best_f1:.4f}")
-        logger.info(f"ROC AUC: {roc_auc:.4f}")
+    logger.success("AVALIACAO NO CONJUNTO DE TESTE")
+    logger.info(f"Threshold (vindo da CV): {metrics['threshold']:.2f}")
+    logger.info(f"Accuracy: {metrics['accuracy']:.3f}")
+    logger.info(f"Precision: {metrics['precision']:.3f}")
+    logger.info(f"Recall: {metrics['recall']:.3f}")
+    logger.info(f"F1: {metrics['f1']:.3f}")
+    logger.info(f"ROC AUC: {metrics['roc_auc']:.3f}")
+    logger.info(f"PR AUC: {metrics['pr_auc']:.3f}")
+
+    # Leitura operacional: de cada 100 pedidos priorizados,
+    # quantos realmente atrasariam, e quantos atrasos capturamos.
+    n_priorizados = int(y_pred.sum())
+    n_atrasos = int(np.asarray(y_test).sum())
+
+    logger.info(
+        f"Pedidos priorizados: {n_priorizados:,} de {len(y_pred):,} "
+        f"({n_priorizados / len(y_pred):.1%} da operacao)"
+    )
+    logger.info(
+        f"Atrasos capturados: {int(metrics['recall'] * n_atrasos):,} "
+        f"de {n_atrasos:,}"
+    )
+
+    return metrics
