@@ -1,24 +1,45 @@
 import pandas as pd
+
+from loguru import logger
+
 from module_olist.modeling.pipeline import (
     create_gradient_boosting_pipeline,
     create_xgboost_pipeline,
     create_lightgbm_pipeline,
 )
 
-def train_models(
+PIPELINES = {
+    "Gradient Boosting": create_gradient_boosting_pipeline,
+    "XGBoost": create_xgboost_pipeline,
+    "LightGBM": create_lightgbm_pipeline,
+}
+
+
+def train_best_model(
+    model_name: str,
     X_train: pd.DataFrame,
     y_train: pd.Series,
 ):
-    models = {
-        "Gradient Boosting": create_gradient_boosting_pipeline(),
-        "XGboost": create_xgboost_pipeline(),
-        "LightGBM": create_lightgbm_pipeline(),
-    }
+    """
+    Treina o modelo vencedor da Cross Validation em todo o conjunto de treino.
 
-    trained_models = {}
+    A comparacao entre modelos ja foi feita na validacao cruzada.
+    Aqui treinamos apenas o vencedor, usando 100% dos dados de treino.
 
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        trained_models[name] = model 
+    Args:
+        model_name (str): Nome do modelo escolhido na Cross Validation.
+        X_train (pd.DataFrame): Features de treino.
+        y_train (pd.Series): Alvo de treino.
 
-    return trained_models
+    Returns:
+        Pipeline: Modelo treinado.
+    """
+
+    logger.info(f"Treinando modelo final: {model_name}")
+
+    pipeline = PIPELINES[model_name]()
+    pipeline.fit(X_train, y_train)
+
+    logger.success(f"Modelo {model_name} treinado.")
+
+    return pipeline
