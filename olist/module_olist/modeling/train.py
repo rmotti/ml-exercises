@@ -1,4 +1,7 @@
-import pandas as pd
+# module_olist/modeling/train.py
+
+import json
+import joblib
 
 from loguru import logger
 
@@ -8,38 +11,107 @@ from module_olist.modeling.pipeline import (
     create_lightgbm_pipeline,
 )
 
-PIPELINES = {
-    "Gradient Boosting": create_gradient_boosting_pipeline,
-    "XGBoost": create_xgboost_pipeline,
-    "LightGBM": create_lightgbm_pipeline,
-}
 
-
-def train_best_model(
-    model_name: str,
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
+def create_selected_model(
+    model_name,
 ):
     """
-    Treina o modelo vencedor da Cross Validation em todo o conjunto de treino.
-
-    A comparacao entre modelos ja foi feita na validacao cruzada.
-    Aqui treinamos apenas o vencedor, usando 100% dos dados de treino.
-
-    Args:
-        model_name (str): Nome do modelo escolhido na Cross Validation.
-        X_train (pd.DataFrame): Features de treino.
-        y_train (pd.Series): Alvo de treino.
-
-    Returns:
-        Pipeline: Modelo treinado.
+    Cria o pipeline correspondente
+    ao modelo selecionado.
     """
 
-    logger.info(f"Treinando modelo final: {model_name}")
+    pipelines = {
+        "Gradient Boosting": create_gradient_boosting_pipeline,
+        "XGBoost": create_xgboost_pipeline,
+        "LightGBM": create_lightgbm_pipeline,
+    }
 
-    pipeline = PIPELINES[model_name]()
-    pipeline.fit(X_train, y_train)
+    if model_name not in pipelines:
+        raise ValueError(
+            f"Modelo desconhecido: {model_name}"
+        )
 
-    logger.success(f"Modelo {model_name} treinado.")
+    return pipelines[model_name]()
 
-    return pipeline
+
+def train_model(
+    model_name,
+    threshold,
+    X_train,
+    y_train,
+    model_path,
+    metadata_path,
+):
+    """
+    Treina o modelo selecionado utilizando
+    todo o conjunto de treinamento
+    e salva modelo e metadados.
+    """
+
+    logger.info(
+        f"Treinando modelo final: {model_name}"
+    )
+
+    # -------------------------------------------------
+    # Cria somente o modelo vencedor
+    # -------------------------------------------------
+
+    model = create_selected_model(
+        model_name
+    )
+
+    # -------------------------------------------------
+    # Treina com TODO o conjunto de treino
+    # -------------------------------------------------
+
+    model.fit(
+        X_train,
+        y_train,
+    )
+
+    # -------------------------------------------------
+    # Salva pipeline completo
+    # -------------------------------------------------
+
+    model_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    joblib.dump(
+        model,
+        model_path,
+    )
+
+    logger.success(
+        f"Modelo salvo em: {model_path}"
+    )
+
+    # -------------------------------------------------
+    # Salva metadados
+    # -------------------------------------------------
+
+    metadata = {
+        "model_name": model_name,
+        "threshold": float(threshold),
+        "selection_metric": "f1_oof",
+        "threshold_metric": "f1",
+    }
+
+    with open(
+        metadata_path,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            metadata,
+            file,
+            indent=4,
+        )
+
+    logger.success(
+        f"Metadados salvos em: {metadata_path}"
+    )
+
+    return model

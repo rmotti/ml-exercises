@@ -2,20 +2,20 @@ import pandas as pd
 from pathlib import Path
 from loguru import logger
 
-def load_data(orders_path: Path, items_path: Path, costumers_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_data(orders_path: Path, items_path: Path, customers_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the Olist dataset from CSV files.
 
     Args:
         orders_path (Path): Path to the orders CSV file.
         items_path (Path): Path to the order items CSV file.
-        costumers_path (Path): Path to the customers CSV file.
+        customers_path (Path): Path to the customers CSV file.
 
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing three DataFrames:
             - orders_df: DataFrame containing orders data.
             - items_df: DataFrame containing order items data.
-            - costumers_df: DataFrame containing customers data.
+            - customers_df: DataFrame containing customers data.
     """
     logger.info("Loading Olist dataset...")
 
@@ -32,10 +32,10 @@ def load_data(orders_path: Path, items_path: Path, costumers_path: Path) -> tupl
     items = pd.read_csv(items_path)
     logger.info(f"Order items data loaded with shape: {items.shape}")
 
-    costumers = pd.read_csv(costumers_path)
-    logger.info(f"Customers data loaded with shape: {costumers.shape}")
+    customers = pd.read_csv(customers_path)
+    logger.info(f"Customers data loaded with shape: {customers.shape}")
 
-    return orders, items, costumers
+    return orders, items, customers
 
 def save_dataset(dataset: pd.DataFrame, output_path: Path) -> None:
     """
@@ -137,7 +137,7 @@ def aggregate_items(items: pd.DataFrame) -> pd.DataFrame:
     # Exibe as cinco primeiras linhas da tabela agregada.
     return items_agg    
 
-def create_dataset(orders, items, costumers):
+def create_dataset(orders, items, customers):
     orders = create_target(orders)
     items_agg = aggregate_items(items)
 
@@ -149,7 +149,7 @@ def create_dataset(orders, items, costumers):
     )
 
     data = data.merge(
-        costumers,
+        customers,
         on="customer_id",
         how="left",
         validate="many_to_one"
