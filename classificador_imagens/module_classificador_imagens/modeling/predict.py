@@ -1,30 +1,47 @@
-from pathlib import Path
+import json
 
 from loguru import logger
-from tqdm import tqdm
-import typer
-
-from module_classificador_imagens.config import MODELS_DIR, PROCESSED_DATA_DIR
-
-app = typer.Typer()
+import numpy as np
+import pandas as pd
+from tensorflow import keras
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    features_path: Path = PROCESSED_DATA_DIR / "test_features.csv",
-    model_path: Path = MODELS_DIR / "model.pkl",
-    predictions_path: Path = PROCESSED_DATA_DIR / "test_predictions.csv",
-    # -----------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Performing inference for model...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Inference complete.")
-    # -----------------------------------------
+def load_model(model_path, metadata_path):
+    """
+    Carrega o modelo treinado
+    e os metadados da inferência.
+    """
+    model = keras.models.load_model(model_path)
+
+    with open(metadata_path, "r", encoding="utf-8") as file:
+        metadata = json.load(file)
+
+    model_name = metadata["model_name"]
+    class_names = metadata["class_names"]
+
+    logger.info(f"Modelo carregado: {model_name}")
+    logger.info(f"Classes carregadas: {class_names}")
+
+    return (model, model_name, class_names)
 
 
-if __name__ == "__main__":
-    app()
+def predict(model, X, class_names):
+    """
+    Realiza inferência e retorna, para cada imagem,
+    a classe com maior probabilidade.
+    """
+    # Probabilidade de cada classe para cada imagem: formato (n, 10).
+    y_proba = model.predict(X, verbose=0)
+
+    # A classe predita é a de maior probabilidade.
+    y_pred = np.argmax(y_proba, axis=1)
+
+    predictions = pd.DataFrame(
+        {
+            "prediction": y_pred,
+            "class_name": [class_names[i] for i in y_pred],
+            "confidence": y_proba.max(axis=1),
+        }
+    )
+
+    return predictions
