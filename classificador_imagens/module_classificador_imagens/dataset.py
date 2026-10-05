@@ -1,29 +1,51 @@
-from pathlib import Path
-
 from loguru import logger
-from tqdm import tqdm
-import typer
+import numpy as np
+from tensorflow import keras
 
-from module_classificador_imagens.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
-
-app = typer.Typer()
-
-
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
+# Nomes das classes na mesma ordem dos rótulos do CIFAR-10:
+# o rótulo 0 é "avião", o 1 é "automóvel", e assim por diante.
+CLASS_NAMES = [
+    "avião",
+    "automóvel",
+    "pássaro",
+    "gato",
+    "cervo",
+    "cachorro",
+    "sapo",
+    "cavalo",
+    "navio",
+    "caminhão",
+]
 
 
-if __name__ == "__main__":
-    app()
+def load_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Carrega a base CIFAR-10 pelo Keras.
+
+    Na primeira execução o Keras baixa a base (~170 MB) e guarda em
+    ~/.keras/datasets. Nas execuções seguintes, lê direto do cache.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Uma tupla contendo:
+            - X_train: imagens de treino, formato (50000, 32, 32, 3), uint8.
+            - X_test: imagens de teste, formato (10000, 32, 32, 3), uint8.
+            - y_train: rótulos de treino, formato (50000,).
+            - y_test: rótulos de teste, formato (10000,).
+    """
+    logger.info("Carregando a base CIFAR-10...")
+
+    # A base já vem separada em treino e teste.
+    (X_train, y_train), (X_test, y_test) = keras.datasets.cifar10.load_data()
+
+    # O Keras entrega os rótulos como coluna, no formato (n, 1).
+    # O flatten transforma em vetor (n,), o que permite usar
+    # CLASS_NAMES[y[i]] e comparar direto com as predições.
+    y_train = y_train.flatten()
+    y_test = y_test.flatten()
+
+    logger.info(f"Formato de X_train: {X_train.shape}")
+    logger.info(f"Formato de y_train: {y_train.shape}")
+    logger.info(f"Formato de X_test: {X_test.shape}")
+    logger.info(f"Formato de y_test: {y_test.shape}")
+
+    return X_train, X_test, y_train, y_test
