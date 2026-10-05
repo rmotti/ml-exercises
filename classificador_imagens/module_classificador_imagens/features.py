@@ -1,29 +1,16 @@
-from pathlib import Path
-
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from module_classificador_imagens.config import PROCESSED_DATA_DIR
-
-app = typer.Typer()
+import numpy as np
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "features.csv",
-    # -----------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Generating features from dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Features generation complete.")
-    # -----------------------------------------
+def normalize_images(X: np.ndarray) -> np.ndarray:
+    """
+    Normaliza os pixels das imagens para o intervalo [0, 1].
 
+    Args:
+        X (np.ndarray): Imagens com pixels de 0 a 255 (uint8).
 
-if __name__ == "__main__":
-    app()
+    Returns:
+        np.ndarray: Imagens em float32 com pixels de 0 a 1.
+    """
+    # Cada pixel vai de 0 a 255. Dividir por 255 coloca todos os valores
+    # entre 0 e 1, escala em que a rede treina de forma mais estável.
+    return X.astype("float32") / 255.0
