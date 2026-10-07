@@ -1,6 +1,9 @@
 # Data
 /data/
 
+# Embeddings gerados a partir das fotos das pessoas autorizadas (dados biométricos)
+/models/face_database.pkl
+
 # Mac OS-specific storage files
 .DS_Store
 

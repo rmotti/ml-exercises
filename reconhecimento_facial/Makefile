@@ -62,10 +62,16 @@ create_environment:
 #################################################################################
 
 
-## Make dataset
-.PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) module_reconhecimento/dataset.py
+## Build the database of authorized faces from data/raw/authorized
+.PHONY: train
+train:
+	$(PYTHON_INTERPRETER) -m module_reconhecimento.main
+
+
+## Run the access control with the notebook webcam
+.PHONY: inference
+inference:
+	$(PYTHON_INTERPRETER) -m module_reconhecimento.inference
 
 
 #################################################################################
