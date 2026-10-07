@@ -1,29 +1,43 @@
-from pathlib import Path
-
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from module_reconhecimento.config import PROCESSED_DATA_DIR
-
-app = typer.Typer()
+from deepface import DeepFace
+from deepface.modules.exceptions import FaceNotDetected
+import numpy as np
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "features.csv",
-    # -----------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Generating features from dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Features generation complete.")
-    # -----------------------------------------
+def extract_faces(image: np.ndarray, model_name: str, detector_backend: str) -> list[dict]:
+    """
+    Detecta os rostos da imagem e gera o embedding de cada um.
 
+    O embedding é um vetor numérico que resume as características do rosto.
+    Fotos da mesma pessoa geram vetores próximos, e de pessoas diferentes,
+    vetores distantes. É a feature usada para comparar rostos.
 
-if __name__ == "__main__":
-    app()
+    Args:
+        image (np.ndarray): Imagem em BGR (foto lida do disco ou frame da webcam).
+        model_name (str): Modelo do DeepFace que gera o embedding.
+        detector_backend (str): Detector do DeepFace que localiza os rostos.
+
+    Returns:
+        list[dict]: Um item por rosto encontrado, com as chaves:
+            - embedding: vetor do rosto (np.ndarray).
+            - facial_area: posição do rosto na imagem (x, y, w, h).
+            Lista vazia quando não há rosto na imagem.
+    """
+    try:
+        faces = DeepFace.represent(
+            img_path=image,
+            model_name=model_name,
+            detector_backend=detector_backend,
+            # Sem rosto, o DeepFace lança FaceNotDetected. Com False, ele
+            # trataria a imagem inteira como um rosto.
+            enforce_detection=True,
+        )
+    except FaceNotDetected:
+        return []
+
+    return [
+        {
+            "embedding": np.asarray(face["embedding"], dtype=np.float32),
+            "facial_area": face["facial_area"],
+        }
+        for face in faces
+    ]
